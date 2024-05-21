@@ -4,76 +4,112 @@
 #include <fstream>
 #include <string>
 
-std::vector<int> conversionToBinarySystem(int num) {
-    std::vector<int> bin, bin32;
-    int division = 1, remainder;
-
-    while (division != 0) {
-        division = num / 2;
-        remainder = num % 2;
-        if (remainder == 0) {
-            bin.emplace_back(0);
-        }
-        else {
-            bin.emplace_back(1);
-        }
-        num = division;
-        remainder = 0;
-    }
-
-    bin32.resize(32 - bin.size());
-    std::reverse(bin.begin(), bin.end());
-    int n = bin32.size() - bin.size();
-    bin32.insert(bin32.end(), bin.begin(), bin.end());
-
-    return bin32;
-};
-
 struct Start {
 
-    int temperature = 23, humidity = 80, pressure = 761;
+    int temperature, humidity, pressure;
+    Start(int temperature, int humidity, int pressure) : temperature{ temperature }, humidity{ humidity }, pressure{ pressure } {}
+    int getTemperature() const { return temperature; }
+    int getHumidity() const { return humidity; }
+    int getPressure() const { return pressure; }
+
+    void setTemperature(int startTemperature) { temperature = startTemperature; }
+    void setHumidity(int startHumidity) { humidity = startHumidity; }
+    void setPressure(int startPressure) { pressure = startPressure; }
 
 };
-void writeToFile(std::vector<int> a) {
-    std::ofstream fout("Test.txt");
+// Для текстовых файлов
+std::ostream& operator << (std::ostream& os, const Start& start)
+{
+    return os << start.getTemperature() << " " << start.getHumidity() << " " << start.getPressure();
+};
+std::istream& operator >> (std::istream& in, Start& start)
+{
+    int temperature, humidity, pressure;
+    in >> temperature >> humidity >> pressure;
+    // если ввод не удался, устанавливаем некоторые значения по умолчанию
+    if (in)
+    {
+        start.setTemperature(temperature);
+        start.setHumidity(humidity);
+        start.setPressure(pressure);
+    }
+    return in;
+};
+void saveToFileTxt(std::vector<Start> weather, std::string file) {  // сохранение в текстовый файл
+    std::ofstream fout(file);
+    if (fout.is_open()) {
+        for (const Start& weather : weather)
+        {
+            fout << weather << std::endl;
+        }
+    }
+    fout.close();
+};
+void loadFromFileTxt(std::string file) {    // чтение из текстового файла
+    std::vector<Start> new_start; // вектор для считываемых данных
+    std::ifstream fin(file);
+    if (fin.is_open())
+    {
+        Start start{ 0,0,0 };
+        while (fin >> start)
+        {
+            new_start.push_back(start);
+        }
+    }
+    for (const Start& start : new_start)
+    {
+        std::cout << start << std::endl;
+    }
+    fin.close();
+};
+void saveToFileBin(std::vector<Start> weather, std::string file) {  // сохранение в бинарный файл
+    std::ofstream fout(file, std::ios_base::binary);
 
-    for (int i = 0; i < a.size(); i++) {
-        fout << a[i];
-    };
+    if (fout.is_open()) {
+        for (const Start& weather : weather)
+        {
+            fout.write((char*)&weather, sizeof(weather));
+        }
+
+    }
 
     fout.close();
 };
-std::string readingFromFile() {
-    std::ifstream fin("Test.txt");
-    std::string resultFromFile;
+void loadFromFileBin(std::string file) { // чтение из бинарного файла
+    std::vector<Start> new_start; // вектор для считываемых данных 
+    std::ifstream fin(file, std::ios_base::binary); // чтение ранее записанных данных из файла
 
-    while (std::getline(fin, resultFromFile))
+    if (fin.is_open()) {
+        Start start{ 0, 0, 0 };  // создание пустой структуры 
+
+        while (fin.read((char*)&start, sizeof(start)))
+        {
+            new_start.push_back(start);
+        }
+    }
+    fin.close();
+    for (const Start& start : new_start)
     {
-        std::cout << resultFromFile << std::endl;
+        std::cout << start << std::endl;
     }
 
-    fin.close();
-
-    return resultFromFile;
 };
-
 int main()
 {
-    Start oneDay;
-    std::vector<int> BinaryTemperature, BinaryHumidity, BinaryPressure, result;
+    // Для текстовых файлов
+    std::string nameFileTxt = "Test.txt";
+    std::vector<Start> weather = { {10, 63, 760}, {15, 63, 758}, {20, 60, 763}, {27, 50, 769} };
 
-    BinaryTemperature = conversionToBinarySystem(oneDay.temperature);
-    BinaryHumidity = conversionToBinarySystem(oneDay.humidity);
-    BinaryPressure = conversionToBinarySystem(oneDay.pressure);
+    saveToFileTxt(weather, nameFileTxt);
+    loadFromFileTxt(nameFileTxt);
 
-    result = BinaryTemperature;
-    result.insert(result.end(), BinaryHumidity.begin(), BinaryHumidity.end());
-    result.insert(result.end(), BinaryPressure.begin(), BinaryPressure.end());
-     
+    std::cout << "*************************" << std::endl;
 
-    writeToFile(result);
-    
-    readingFromFile();
-    
+    // Для бинарных файлов
+    std::string nameFileBin = "Test.bin";
+
+    saveToFileBin(weather, nameFileBin);
+    loadFromFileBin(nameFileBin);
+
 }
 
